@@ -1,0 +1,61 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deposit Successful - BraamBowl</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="~/css/successdeposit.css" rel="stylesheet" />
+</head>
+<body>
+    <!-- Confetti -->
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+
+    <!-- Modal Overlay -->
+    <div class="modal-overlay">
+        <div class="success-modal">
+            <!-- Success Icon -->
+            <div class="success-icon"></div>
+
+            <!-- Title -->
+            <h2 class="success-title">Deposit Successful!</h2>
+
+            <!-- Message -->
+            <div class="success-message">
+                Your deposit has been processed successfully! Thank you for topping up your cafeteria account.
+            </div>
+
+            <!-- Details -->
+            <div class="success-details">
+                <div class="detail-row">
+                    <span class="detail-label">Deposit Amount:</span>
+                    <span class="detail-value">R @Model.DepositAmount.ToString("F2")</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Company Credit:</span>
+                    <span class="detail-value">R @Model.CompanyCredit.ToString("F2")</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">New Balance:</span>
+                    <span class="detail-value">R @Model.NewBalance.ToString("F2")</span>
+                </div>
+            </div>
+            
+            <!-- Return Button -->
+            <a  class="return-btn" asp-action="Dashboard" asp-controller="Home">Return to Dashboard</a>
+        </div>
+    </div>
+</body>
+</html>

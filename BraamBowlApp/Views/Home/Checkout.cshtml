@@ -1,0 +1,324 @@
+﻿@model CheckoutViewModel
+
+@{
+    ViewBag.Title = "Checkout";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - @Model.Shop_Name</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap">
+
+    <link href="~/css/checkoutcss.css" rel="stylesheet" />
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="checkout-title">🛒 Checkout</h1>
+            <p class="checkout-subtitle">Review your order from @Model.Shop_Name</p>
+            <a href="@Url.Action("Menu", "Home", new { id = Model.ShopId })" class="back-btn">← Back to Menu</a>
+        </div>
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-error">
+                ⚠️ @TempData["ErrorMessage"]
+            </div>
+        }
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success">
+                ✓ @TempData["SuccessMessage"]
+            </div>
+        }
+
+        <!-- Insufficient Balance Warning (Hidden by default) -->
+        <div id="insufficientBalanceWarning" class="insufficient-balance-warning" style="display: none;">
+            <div class="warning-header">
+                <span class="warning-icon">⚠️</span>
+                <h3 class="warning-title">Insufficient Balance!</h3>
+            </div>
+            <p class="warning-message">
+                Oops! The total cost of your order exceeds your available account balance.
+                You need to reduce your order to proceed with the purchase.
+            </p>
+            <div class="warning-details">
+                <div class="warning-detail-item">
+                    <div class="warning-detail-label">Your Balance</div>
+                    <div class="warning-detail-value positive" id="warningBalance">R 0.00</div>
+                </div>
+                <div class="warning-detail-item">
+                    <div class="warning-detail-label">Order Total</div>
+                    <div class="warning-detail-value" id="warningTotal">R 0.00</div>
+                </div>
+                <div class="warning-detail-item">
+                    <div class="warning-detail-label">Shortage</div>
+                    <div class="warning-detail-value negative" id="warningShortage">R 0.00</div>
+                </div>
+            </div>
+            <div class="warning-suggestions">
+                <h4 class="warning-suggestions-title">💡 What you can do:</h4>
+                <ul class="warning-suggestions-list">
+                    <li>Reduce the quantity of some items</li>
+                    <li>Remove items from your cart</li>
+                    <li>Contact your administrator to add funds to your account</li>
+                </ul>
+            </div>
+        </div>
+
+        @if (Model.Items != null && Model.Items.Any())
+        {
+            <form asp-action="PlaceOrder" asp-route-shopId="@Model.ShopId" method="post" id="checkoutForm">
+                <div class="checkout-grid">
+                    <!-- Order Items -->
+                    <div class="card">
+                        <h2 class="card-title">📦 Your Order</h2>
+                        <div class="order-items" id="orderItemsContainer">
+                            @for (int i = 0; i < Model.Items.Count; i++)
+                            {
+                                <div class="order-item" id="item-@i" data-index="@i">
+                                    <div class="item-info">
+                                        <div class="item-name">@Model.Items[i].Name</div>
+                                        <div class="item-price">R @Model.Items[i].Price.ToString("F2") each</div>
+                                    </div>
+                                    <div class="quantity-controls">
+                                        <button type="button" class="qty-btn" onclick="updateQuantity(@i, -1)">−</button>
+                                        <input type="hidden" name="Items[@i].MenuItemId" value="@Model.Items[i].MenuItemId" id="menuItemId-@i" />
+                                        <input type="hidden" name="Items[@i].Name" value="@Model.Items[i].Name" id="itemName-@i" />
+                                        <input type="hidden" name="Items[@i].Price" value="@Model.Items[i].Price" id="itemPrice-@i" />
+                                        <input type="number" name="Items[@i].Quantity" value="@Model.Items[i].Quantity" class="quantity" id="qty-@i" min="1" readonly />
+                                        <button type="button" class="qty-btn" onclick="updateQuantity(@i, 1)">+</button>
+                                    </div>
+                                    <div class="item-total" id="total-@i">R @((Model.Items[i].Price * Model.Items[i].Quantity).ToString("F2"))</div>
+                                    <button type="button" class="remove-btn" onclick="removeItem(@i)">🗑️ Remove</button>
+                                </div>
+                            }
+                        </div>
+                        <!-- Empty cart message (hidden initially) -->
+                        <div id="emptyCartMessage" style="display: none;">
+                            <div class="empty-cart">
+                                <div class="empty-cart-icon">🛒</div>
+                                <div class="empty-cart-text">Your cart is empty</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Customer Info & Summary -->
+                    <div>
+                        <div class="card">
+                            <h2 class="card-title">👤 Employee Information</h2>
+                            <div class="info-row">
+                                <span class="info-label">Employee Names:</span>
+                                <span class="info-value">@Model.EmployeeName @Model.EmployeeSurname</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Account Balance:</span>
+                                <span class="info-value balance-value">R @Model.EmployeeBalance.ToString("F2")</span>
+                            </div>
+
+                            <div class="info-row remaining-balance-row">
+                                <span class="info-label">Remaining Balance:</span>
+                                <span class="info-value remaining-balance-value" id="remainingBalance">R @((Model.EmployeeBalance - Model.TotalAmount).ToString("F2"))</span>
+                            </div>
+                        </div>
+
+                        <div class="card" style="margin-top: 2rem;">
+                            <h2 class="card-title">💰 Order Summary</h2>
+                            <div class="summary-row">
+                                <span class="summary-label">Subtotal:</span>
+                                <span class="summary-value" id="subtotal">R @Model.TotalAmount.ToString("F2")</span>
+                            </div>
+                            <div class="summary-row total-row">
+                                <span class="total-label">Total:</span>
+                                <span class="total-value" id="grandTotal">R @Model.TotalAmount.ToString("F2")</span>
+                            </div>
+                        </div>
+
+
+                        <div class="card" style="margin-top: 2rem;">
+                            <h2 class="card-title">📍 Delivery Address</h2>
+                            <textarea name="DeliveryAddress" class="address-input" placeholder="Enter your delivery address...">@Model.DeliveryAddress</textarea>
+                        </div>
+
+
+                        <button type="submit" class="place-order-btn" id="placeOrderBtn">
+                            🚀 Place Order
+                        </button>
+                    </div>
+                </div>
+            </form>
+        }
+        else
+        {
+            <div class="card">
+                <div class="empty-cart">
+                    <div class="empty-cart-icon">🛒</div>
+                    <div class="empty-cart-text">Your cart is empty</div>
+                    <a href="@Url.Action("Menu", "Home", new { id = Model.ShopId })" class="place-order-btn" style="display: inline-block; width: auto; padding: 1rem 2rem; text-decoration: none;">
+                        Browse Menu
+                    </a>
+                </div>
+            </div>
+        }
+    </div>
+
+    <script>
+        const itemPrices = @Html.Raw(Json.Serialize(Model.Items?.Select(i => i.Price).ToList() ?? new List<decimal>()));
+        const employeeBalance = parseFloat("@Model.EmployeeBalance.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)");
+        let activeItemsCount = @(Model.Items?.Count ?? 0);
+
+        function updateQuantity(index, change) {
+            const qtyInput = document.getElementById(`qty-${index}`);
+            if (!qtyInput) return;
+
+            let currentQty = parseInt(qtyInput.value);
+            let newQty = currentQty + change;
+
+            if (newQty < 1) newQty = 1;
+
+            qtyInput.value = newQty;
+            updateItemTotal(index, newQty);
+            updateGrandTotal();
+        }
+
+        function updateItemTotal(index, quantity) {
+            const price = itemPrices[index];
+            const total = price * quantity;
+            const totalElement = document.getElementById(`total-${index}`);
+            if (totalElement) {
+                totalElement.textContent = `R ${total.toFixed(2)}`;
+            }
+        }
+
+        function updateGrandTotal() {
+            let grandTotal = 0;
+
+            // Calculate total from all active items
+            @for (int i = 0; i < (Model.Items?.Count ?? 0); i++)
+            {
+                    <text>
+                    const qtyInput@(i) = document.getElementById('qty-@i');
+                    if (qtyInput@(i) && qtyInput@(i).value > 0) {
+                        const qty@(i) = parseInt(qtyInput@(i).value);
+                        grandTotal += itemPrices[@i] * qty@(i);
+                    }
+                    </text>
+            }
+
+            // Update UI
+            document.getElementById('subtotal').textContent = `R ${grandTotal.toFixed(2)}`;
+            document.getElementById('grandTotal').textContent = `R ${grandTotal.toFixed(2)}`;
+
+            const remainingBalance = employeeBalance - grandTotal;
+            const remainingBalanceElement = document.getElementById('remainingBalance');
+            remainingBalanceElement.textContent = `R ${remainingBalance.toFixed(2)}`;
+
+            // Toggle negative class
+            if (remainingBalance < 0) {
+                remainingBalanceElement.classList.add('negative');
+                showInsufficientBalanceWarning(grandTotal, remainingBalance);
+            } else {
+                remainingBalanceElement.classList.remove('negative');
+                hideInsufficientBalanceWarning();
+            }
+
+            // Disable/enable place order button
+            const placeOrderBtn = document.getElementById('placeOrderBtn');
+            if (remainingBalance < 0 || activeItemsCount === 0) {
+                placeOrderBtn.disabled = true;
+            } else {
+                placeOrderBtn.disabled = false;
+            }
+        }
+
+        function showInsufficientBalanceWarning(total, remaining) {
+            const warning = document.getElementById('insufficientBalanceWarning');
+            const shortage = Math.abs(remaining);
+
+            document.getElementById('warningBalance').textContent = `R ${employeeBalance.toFixed(2)}`;
+            document.getElementById('warningTotal').textContent = `R ${total.toFixed(2)}`;
+            document.getElementById('warningShortage').textContent = `R ${shortage.toFixed(2)}`;
+
+            warning.style.display = 'block';
+
+            // Scroll to warning
+            setTimeout(() => {
+                warning.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        }
+
+        function hideInsufficientBalanceWarning() {
+            const warning = document.getElementById('insufficientBalanceWarning');
+            warning.style.display = 'none';
+        }
+
+        function removeItem(index) {
+            const itemRow = document.getElementById(`item-${index}`);
+            if (!itemRow) return;
+
+            // Add removing animation
+            itemRow.classList.add('removing');
+
+            // Wait for animation to complete
+            setTimeout(() => {
+                // Remove the item from DOM
+                itemRow.remove();
+
+                // Set quantity to 0 and clear the input names so it won't be posted
+                const qtyInput = document.getElementById(`qty-${index}`);
+                const menuItemIdInput = document.getElementById(`menuItemId-${index}`);
+                const itemNameInput = document.getElementById(`itemName-${index}`);
+                const itemPriceInput = document.getElementById(`itemPrice-${index}`);
+
+                if (qtyInput) {
+                    qtyInput.value = 0;
+                    qtyInput.name = '';
+                }
+                if (menuItemIdInput) menuItemIdInput.name = '';
+                if (itemNameInput) itemNameInput.name = '';
+                if (itemPriceInput) itemPriceInput.name = '';
+
+                // Decrease active items count
+                activeItemsCount--;
+
+                // Update totals
+                updateGrandTotal();
+
+                // If no items left, show empty cart message
+                if (activeItemsCount === 0) {
+                    document.getElementById('orderItemsContainer').style.display = 'none';
+                    document.getElementById('emptyCartMessage').style.display = 'block';
+                }
+            }, 400); // Match the CSS animation duration
+        }
+
+        // Form submission handling
+        document.getElementById('checkoutForm')?.addEventListener('submit', function(e) {
+            const remainingBalance = employeeBalance - parseFloat(document.getElementById('grandTotal').textContent.replace('R ', ''));
+
+            if (remainingBalance < 0) {
+                e.preventDefault();
+                alert('⚠️ Cannot place order: Insufficient balance. Please reduce your order.');
+                return false;
+            }
+
+            if (activeItemsCount === 0) {
+                e.preventDefault();
+                alert('⚠️ Cannot place order: Your cart is empty.');
+                return false;
+            }
+
+            const btn = document.getElementById('placeOrderBtn');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Processing Order...';
+        });
+
+        // Initial check on page load
+        updateGrandTotal();
+    </script>
+</body>
+</html>

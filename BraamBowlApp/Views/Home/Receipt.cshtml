@@ -1,0 +1,136 @@
+﻿@model ReceiptViewModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Receipt - @Model.ShopName</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="~/css/recieptcss.css" rel="stylesheet" />
+</head>
+<body>
+    <div class="receipt-modal">
+        <!-- Close Button -->
+        <button class="modal-close" onclick="closeModal()" aria-label="Close">×</button>
+
+        <!-- Compact Header -->
+        <div class="receipt-header">
+            <div class="header-left">
+                <div class="success-badge">
+                    <span class="success-icon">✅</span>
+                    <div class="header-title">
+                        <h1>Order Successful!</h1>
+                        <p>Your driver is on the way</p>
+                    </div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="shop-name">@Model.ShopName</div>
+                <div class="order-number-badge">Order #@Model.OrderNumber</div>
+            </div>
+        </div>
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="success-message">
+                ✓ @TempData["SuccessMessage"]
+            </div>
+        }
+
+        <!-- 3 Column Content -->
+        <div class="receipt-content">
+            <!-- Column 1: Order Items -->
+            <div class="content-card">
+                <div class="card-header">
+                    <span class="card-icon">🛍️</span>
+                    <h3 class="card-title">Order Items</h3>
+                </div>
+                <div class="items-grid">
+                    @foreach (var item in Model.Items)
+                    {
+                        <div class="item-row">
+                            <div>
+                                <div class="item-name">@item.Name</div>
+                                <div class="item-detail">R @item.Price.ToString("F2") × @item.Quantity</div>
+                            </div>
+                            <div class="item-price">R @((item.Price * item.Quantity).ToString("F2"))</div>
+                        </div>
+                    }
+                </div>
+                <div class="total-section">
+                    <div class="total-label">Total Amount</div>
+                    <div class="total-amount">R @Model.TotalAmount.ToString("F2")</div>
+                </div>
+            </div>
+
+            <!-- Column 2: Customer & Order Info -->
+            <div class="content-card">
+                <div class="card-header">
+                    <span class="card-icon">👤</span>
+                    <h3 class="card-title">Employee</h3>
+                </div>
+                <div class="info-list">
+                    <div class="info-item">
+                        <span class="info-label">Name:</span>
+                        <span class="info-value">@Model.EmployeeName @Model.EmployeeSurname</span>
+                    </div>
+                </div>
+
+                <div class="card-header" style="margin-top: 2rem;">
+                    <span class="card-icon">📋</span>
+                    <h3 class="card-title">Order Info</h3>
+                </div>
+                <div class="info-list">
+                    <div class="info-item">
+                        <span class="info-label">Order Date:</span>
+                        <span class="info-value">@Model.OrderDate.ToString("MMM dd, yyyy")<br />@Model.OrderDate.ToString("HH:mm")</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Est. Delivery:</span>
+                        <span class="info-value">@Model.EstimatedDelivery.ToString("MMM dd, yyyy")<br />@Model.EstimatedDelivery.ToString("HH:mm")</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column 3: Delivery Details -->
+            <div class="content-card">
+                <div class="card-header">
+                    <span class="card-icon">🚚</span>
+                    <h3 class="card-title">Delivery</h3>
+                </div>
+                <div class="info-list">
+                    <div class="info-item">
+                        <span class="info-label">Driver:</span>
+                        <span class="info-value">@Model.DriverName</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Address:</span>
+                        <span class="info-value">@Model.DeliveryAddress</span>
+                    </div>
+                </div>
+
+                <div class="otp-card">
+                    <div class="otp-label">🔐 Your Delivery OTP</div>
+                    <div class="otp-code">@Model.OTP</div>
+                    <div class="otp-note">Show this code to your driver</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="receipt-footer">
+            <a asp-controller="Home" asp-action="Index" asp-route-id="@Model.ShopId" class="action-btn">
+                🏠 Back to Menu
+            </a>
+            <button onclick="window.print()" class="action-btn secondary">
+                🖨️ Print Receipt
+            </button>
+        </div>
+    </div>
+
+    <script src="~/js/reciept.js"></script>
+</body>
+</html>
